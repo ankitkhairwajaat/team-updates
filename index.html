@@ -166,6 +166,13 @@
   function todayKey(){ return dayKey(new Date()); }
   function initials(name){ var p=name.trim().split(/\s+/); return (p.length>1?p[0][0]+p[1][0]:name.slice(0,2)).toUpperCase(); }
   function esc(s){ return (s||"").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;"); }
+  function fmtIST(iso){
+    if(!iso) return "";
+    var d = new Date(iso);
+    if(isNaN(d)) return iso;
+    var s = d.toLocaleString("en-GB", { timeZone:"Asia/Kolkata", year:"numeric", month:"2-digit", day:"2-digit", hour:"2-digit", minute:"2-digit", second:"2-digit", hour12:false });
+    return s + " IST";
+  }
   function toast(m){ var t=document.getElementById("toast"); t.textContent=m; t.classList.add("show"); clearTimeout(t._t); t._t=setTimeout(function(){t.classList.remove("show");},1900); }
 
   function setSync(state, text){
@@ -231,7 +238,7 @@
         html+='<div class="field-row"><div class="k">Done</div><div class="v">'+esc(u.done)+'</div></div>';
         if((u.next||"").trim()) html+='<div class="field-row"><div class="k">Next</div><div class="v">'+esc(u.next)+'</div></div>';
         if((u.blockers||"").trim()) html+='<div class="field-row blocker"><div class="k">Blocker</div><div class="v">'+esc(u.blockers)+'</div></div>';
-        html+='<div class="submitted-at"><button class="edit-link" data-edit="'+esc(name)+'">Edit my update</button></div></div>';
+        html+='<div class="submitted-at">'+(u.updated_at?esc(fmtIST(u.updated_at))+' &middot; ':'')+'<button class="edit-link" data-edit="'+esc(name)+'">Edit my update</button></div></div>';
       }
       div.innerHTML=html; root.appendChild(div);
     });
@@ -311,7 +318,7 @@
     setSync("","Building export\u2026");
     fetchAll().then(function(rows){
       var out=[["Date","Name","Done","Next","Blockers","Updated"]];
-      rows.forEach(function(u){ out.push([u.day,u.name,u.done||"",u.next||"",u.blockers||"",u.updated_at||""]); });
+      rows.forEach(function(u){ out.push([u.day,u.name,u.done||"",u.next||"",u.blockers||"",fmtIST(u.updated_at)]); });
       if(out.length===1){ toast("Nothing to export yet"); setSync("ok","Live \u2014 shared with your team"); return; }
       var csv=out.map(function(r){ return r.map(function(c){ return '"'+String(c).replace(/"/g,'""')+'"'; }).join(","); }).join("\n");
       var blob=new Blob([csv],{type:"text/csv;charset=utf-8;"});
