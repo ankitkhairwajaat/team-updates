@@ -62,6 +62,7 @@
   .submitted-at { font-size: 11px; color: var(--ink-faint); margin-top: 8px; }
   .edit-link { background: none; border: none; color: var(--accent); font-size: 12px; font-weight: 600; cursor: pointer; padding: 0; }
   .edit-link:hover { text-decoration: underline; }
+  .clear-link { color: var(--danger); }
 
   aside .panel { background: var(--card); border: 1px solid var(--line); border-radius: var(--radius); padding: 16px; box-shadow: var(--shadow); position: sticky; top: 20px; }
   aside h2 { font-size: 16px; margin: 0 0 14px; font-weight: 650; }
@@ -156,7 +157,7 @@
   var SUPABASE_URL = "https://zgavihrogwvkcxgjjupq.supabase.co";
   var SUPABASE_ANON_KEY = "sb_publishable_gsv0RjCTQYHmtnFd2uxb3A_eS8vfNs3";
   var MANAGER_PASSWORD = "Ankit@189895";
-  var TEAM = ["Ankit","Hema","Prerit","Anu","Abhishek","Nikshita","Sreenadh","Dheeraj","Swen","Bharat","Akshaya","Shanmukha","Chandu","Shivam","Naveen","Aishwariya","Mukheem","Krishna"];
+  var TEAM = ["Ankit","Swen","Bharat","Akshaya","Shanmukha","Chandu","Shivam","Naveen","Aishwariya","Mukheem","Krishna"];
 
   var configured = SUPABASE_URL && SUPABASE_ANON_KEY;
   var viewDate = new Date();
@@ -206,6 +207,14 @@
     });
   }
 
+  function deleteUpdate(dk, name){
+    var url = SUPABASE_URL + "/rest/v1/updates?day=eq." + encodeURIComponent(dk) + "&name=eq." + encodeURIComponent(name);
+    return fetch(url, { method:"DELETE", headers: headers() }).then(function(r){
+      if(!r.ok) return r.text().then(function(t){ throw new Error(t||"delete failed"); });
+      return true;
+    });
+  }
+
   function fetchAll(){
     var url = SUPABASE_URL + "/rest/v1/updates?select=*&order=day.asc,name.asc";
     return fetch(url, { headers: headers() }).then(function(r){ if(!r.ok) throw new Error("read failed"); return r.json(); });
@@ -238,12 +247,24 @@
         html+='<div class="field-row"><div class="k">Done</div><div class="v">'+esc(u.done)+'</div></div>';
         if((u.next||"").trim()) html+='<div class="field-row"><div class="k">Next</div><div class="v">'+esc(u.next)+'</div></div>';
         if((u.blockers||"").trim()) html+='<div class="field-row blocker"><div class="k">Blocker</div><div class="v">'+esc(u.blockers)+'</div></div>';
-        html+='<div class="submitted-at">'+(u.updated_at?esc(fmtIST(u.updated_at))+' &middot; ':'')+'<button class="edit-link" data-edit="'+esc(name)+'">Edit my update</button></div></div>';
+        html+='<div class="submitted-at">'+(u.updated_at?esc(fmtIST(u.updated_at))+' &middot; ':'')+'<button class="edit-link" data-edit="'+esc(name)+'">Edit my update</button> &middot; <button class="edit-link clear-link" data-clear="'+esc(name)+'">Clear &amp; set pending</button></div></div>';
       }
       div.innerHTML=html; root.appendChild(div);
     });
     Array.prototype.forEach.call(root.querySelectorAll("[data-edit]"),function(b){
       b.addEventListener("click",function(){ loadIntoForm(b.getAttribute("data-edit")); });
+    });
+    Array.prototype.forEach.call(root.querySelectorAll("[data-clear]"),function(b){
+      b.addEventListener("click",function(){
+        var name=b.getAttribute("data-clear");
+        if(!window.confirm("Clear "+name+"'s update for this day and set back to Pending?")) return;
+        b.disabled=true;
+        deleteUpdate(dayKey(viewDate), name).then(function(){
+          toast("Cleared \u2014 back to Pending"); refresh();
+        }).catch(function(){
+          toast("Couldn't clear \u2014 add the delete policy in Supabase"); b.disabled=false;
+        });
+      });
     });
   }
 
